@@ -1,25 +1,24 @@
 import discord
-import asyncio
-import pyaudio
+import numpy as np
+import sounddevice as sd
 from dotenv import load_dotenv
 import os
+import asyncio
+import sys
 
 # Load environment variables
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
+TOKEN = os.getenv('TOKEN')
 
-client = discord.Client()
+intents = discord.Intents.default()
+intents.message_content = True
 
-TOKEN = 'your_bot_token_here'
-client = discord.Client()
+client = discord.Client(intents=intents)
 
-# PyAudio setup
-FORMAT = pyaudio.paInt16
-CHANNELS = 2
-RATE = 44100
-CHUNK = 1024
-audio = pyaudio.PyAudio()
-stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+# Audio settings
+samplerate = 44100  # Sample rate
+channels = 2  # Adjust based on your needs
+dtype = 'int16'  # Data type for the audio stream
 
 @client.event
 async def on_ready():
@@ -32,11 +31,23 @@ async def on_message(message):
         if channel:
             voice_client = await channel.connect()
             await message.channel.send("Connected and now playing.")
-            play_audio(voice_client)
+            stream_audio(voice_client)
 
-def play_audio(voice_client):
-    while True:  # You'll need to implement proper stopping conditions
-        data = stream.read(CHUNK)
-        voice_client.send_audio_packet(data)
+def callback(indata, frames, time, status):
+    # This function will be called for each audio block captured
+    if status:
+        print(status, file=sys.stderr)
+    # Convert the NumPy array to bytes and then stream it to Discord
+    # Note: You might need to adjust this part based on Discord's requirements
+    # This is a placeholder to illustrate the process
+    audio_data = indata.tobytes()
+
+def stream_audio(voice_client):
+    with sd.InputStream(samplerate=samplerate, channels=channels, dtype=dtype, callback=callback):
+        print("Streaming started...")
+        # Keep the stream alive or perform other tasks here
+        # You might need to adjust this logic to fit your application
+        while True:
+            asyncio.sleep(1)  # Prevent blocking
 
 client.run(TOKEN)
